@@ -33,7 +33,8 @@ DOM ; le contexte complet demande un DOM simulé et un faux `WebGLRenderer` (auc
 
 ## Jeu (`ctx-echecs.js`, contexte d'identifiant « echecs »)
 Règles : chess.js. Jeux de pièces `EC_JEUX`, thèmes `EC_THEMES` (bouton Apparence), contrôle des cases
-`ec_controle()` + `EchecsControle`. Événements : `echecs:coup`, `echecs:pose`, `echecs:echec`, `echecs:fin`,
+`ec_controle()` + `EchecsControle` ; `ec_echange()` (évaluation statique des échanges, enfilades comprises) : le
+bouclier d'une pièce défendue qui perd quand même du matériel luit en rouge (`EC_MENACE`, pulsation « luciole »). Événements : `echecs:coup`, `echecs:pose`, `echecs:echec`, `echecs:fin`,
 `echecs:annulation`, `echecs:nouvelle` (les sons y répondent). Partie enregistrée en PGN dans `this.state`.
 
 ## Contexte de développement

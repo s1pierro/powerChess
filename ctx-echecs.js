@@ -12,7 +12,8 @@
 // Rendu à la demande (moteur.continu = false) : rien n'est redessiné tant que rien ne bouge.
 //
 // Contrôle des cases (bouton ⚔) : faisceaux d'énergie sur les cases vides contrôlées, épée sur les pièces
-// attaquées, bouclier sur les pièces défendues (voir EchecsControle).
+// attaquées, bouclier sur les pièces défendues (voir EchecsControle). Si l'échange calculé sur la case d'une pièce
+// défendue lui fait quand même perdre du matériel (ec_echange), son bouclier luit en rouge, comme une luciole.
 //
 // Toucher une pièce du camp au trait, puis une case marquée · Glisser : tourner · Pincer : zoom ·
 // Double appui hors du plateau : vue du joueur au trait.
@@ -40,6 +41,8 @@ const EC_THEMES = {
   nuit:    { claire: '#5c5a7c', foncee: '#2b2940', cadre: '#13121c', blancs: '#e9e5ff', noirs: '#e0527a', dernier: '#7c6cf0', contour: '#07060c', energieB: '#bfe7ff', energieN: '#ff4f8b' },
   retro:   { claire: '#9bbc0f', foncee: '#5a8a1c', cadre: '#0f380f', blancs: '#e0f8d0', noirs: '#1e4d1e', dernier: '#c8d870', contour: '#0f380f', energieB: '#e0f8d0', energieN: '#0f380f' }
 };
+const EC_VALEURS = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 100 };   // valeur des pièces pour le calcul des échanges
+const EC_MENACE = '#ff2b2b';        // lueur du bouclier d'une pièce qui perd l'échange
 const EC_CONTOUR = 1.4;             // épaisseur du contour, en unités des modèles (≈ 0,025 case)
 const ec_borner = (v, min, max) => v < min ? min : v > max ? max : v;
 
@@ -73,6 +76,59 @@ function ec_controle(jeu) {
     else portee([...DIAG, ...DROIT]);
   }
   return res;
+}
+
+// `de` attaque-t-elle `vers` sur la grille g (case → pièce) ? Les pièces à longue portée s'arrêtent aux pièces de g.
+function ec_attaque(g, de, vers) {
+  const p = g[de], f0 = EC_FICHIERS.indexOf(de[0]), r0 = +de[1] - 1;
+  const df = EC_FICHIERS.indexOf(vers[0]) - f0, dr = +vers[1] - 1 - r0, adf = Math.abs(df), adr = Math.abs(dr);
+  const libre = () => {
+    const sf = Math.sign(df), sr = Math.sign(dr);
+    for (let f = f0 + sf, r = r0 + sr; f !== f0 + df || r !== r0 + dr; f += sf, r += sr) if (g[EC_FICHIERS[f] + (r + 1)]) return false;
+    return true;
+  };
+  const diagonale = adf === adr && adf > 0, droite = (adf === 0) !== (adr === 0);
+  switch (p.type) {
+    case 'p': return adf === 1 && dr === (p.color === 'w' ? 1 : -1);
+    case 'n': return adf * adr === 2;
+    case 'k': return Math.max(adf, adr) === 1;
+    case 'b': return diagonale && libre();
+    case 'r': return droite && libre();
+    default: return (diagonale || droite) && libre();
+  }
+}
+
+// Case de la pièce la moins précieuse de `camp` qui attaque `cible` (null s'il n'y en a pas)
+function ec_moindreAttaquant(g, cible, camp) {
+  let meilleure = null;
+  for (const c in g) {
+    if (c === cible || g[c].color !== camp || !ec_attaque(g, c, cible)) continue;
+    if (!meilleure || EC_VALEURS[g[c].type] < EC_VALEURS[g[meilleure].type]) meilleure = c;
+  }
+  return meilleure;
+}
+
+// Échange sur la case `cible` (évaluation statique des échanges) : matériel gagné par le camp adverse de la pièce
+// qui s'y trouve, si chaque camp prend avec sa pièce la moins précieuse et peut s'arrêter quand prendre lui coûterait.
+// Les pièces retirées découvrent celles qui sont derrière elles (tour derrière tour, dame derrière fou…).
+// Clouages, promotions et prise en passant ne sont pas pris en compte. > 0 : la pièce visée perd du matériel.
+function ec_echange(jeu, cible) {
+  const g = {};
+  for (const c of jeu.SQUARES) { const p = jeu.get(c); if (p) g[c] = p; }
+  let camp = g[cible].color === 'w' ? 'b' : 'w', de = ec_moindreAttaquant(g, cible, camp);
+  if (!de) return 0;
+  const gain = [EC_VALEURS[g[cible].type]];      // gain[d] : bilan de la d-ième prise pour le camp qui la fait
+  let d = 0;
+  for (;;) {
+    d++;
+    gain[d] = EC_VALEURS[g[de].type] - gain[d - 1];
+    delete g[de];
+    camp = camp === 'w' ? 'b' : 'w';
+    de = ec_moindreAttaquant(g, cible, camp);
+    if (!de) break;
+  }
+  while (--d) gain[d - 1] = -Math.max(-gain[d - 1], gain[d]);   // chaque camp peut renoncer à prendre
+  return gain[0];
 }
 
 // Boîte ajoutée à un maillage (faces tournées vers l'extérieur, même ordre que Maillage.cube)
@@ -130,6 +186,7 @@ class EchecsControle {
     alpha.needsUpdate = true;
     const energie = () => new THREE.MeshBasicMaterial({ alphaMap: alpha, transparent: true, depthWrite: false, side: THREE.DoubleSide });
     this.matEnergie = { w: energie(), b: energie() };
+    this.rouge = new THREE.Color(EC_MENACE);
     this.mat = { acier: new THREE.MeshToonMaterial({ color: '#c8ccd8', gradientMap: paliers }), cuir: new THREE.MeshToonMaterial({ color: '#6b4a2f', gradientMap: paliers }) };
     const arme = mm => { const geo = mm.geometrie(); return { geo, contour: Modeles.contour(geo, 0.007) }; };
     this.formes = { epee: arme(ec_epee()), bouclier: arme(ec_bouclier()) };
@@ -152,7 +209,11 @@ class EchecsControle {
       armes.add(epee, bouclier);
       faisceau.visible = armes.visible = false;
       scene.add(faisceau, armes);
-      this.cases[c] = { faisceau, faces, armes, epee, bouclier };
+      // Lueur de menace : un matériau propre à ce bouclier, dont la couleur passe de celle du camp (base) au rouge
+      // et revient ; l'émission rouge garde la teinte vive du côté de l'ombre
+      const menace = new THREE.MeshToonMaterial({ gradientMap: paliers, emissive: EC_MENACE, emissiveIntensity: 0 });
+      menace.userData.base = new THREE.Color();
+      this.cases[c] = { faisceau, faces, armes, epee, bouclier, menace, perte: 0, phase: Math.random() * 2 * Math.PI };
     }
     this.couleurs();
   }
@@ -167,9 +228,10 @@ class EchecsControle {
     return o;
   }
 
-  // Matériaux d'une arme : « camp » aux couleurs des pièces de `couleur`
-  _materiaux(o, couleur) {
-    const camp = couleur === 'w' ? this.ec.mat.blancs : this.ec.mat.noirs;
+  // Matériaux d'une arme : « camp » aux couleurs des pièces de `couleur` (ou `propre`, un matériau qui les reprend)
+  _materiaux(o, couleur, propre) {
+    let camp = couleur === 'w' ? this.ec.mat.blancs : this.ec.mat.noirs;
+    if (propre) { propre.userData.base.copy(camp.color); propre.color.copy(camp.color); camp = propre; }
     o.material = o.geometry.userData.materiaux.map(n => n === 'camp' ? camp : this.mat[n]);
   }
 
@@ -177,6 +239,8 @@ class EchecsControle {
     const t = EC_THEMES[this.ec.state.theme];
     this.matEnergie.w.color.set(t.energieB);
     this.matEnergie.b.color.set(t.energieN);
+    this.cle = null;                  // les boucliers menacés reprennent la couleur des pièces du nouveau thème
+    this.mettreAJour();
   }
 
   // Recalcule l'état des cases si la position a changé ; rien n'est affiché pendant une animation
@@ -184,7 +248,7 @@ class EchecsControle {
     const ec = this.ec, voir = ec.state.controle && !ec.occupe;
     if (!voir) {
       if (this.cle !== null) { for (const c in this.cases) this.cases[c].faisceau.visible = this.cases[c].armes.visible = false; this.cle = null; }
-      this._pulsation(false);
+      this._pulsation(false, false);
       return;
     }
     const cle = ec.jeu.fen();
@@ -192,7 +256,7 @@ class EchecsControle {
     this.cle = cle;
     const etat = ec_controle(ec.jeu), taille = n => Math.min(1.5, 0.75 + 0.25 * (n - 1));
     const hauteur = n => Math.min(0.85, 0.2 + 0.13 * (n - 1));
-    let energie = false;
+    let energie = false, menaces = false;
     for (const c in this.cases) {
       const v = this.cases[c], e = etat[c], p = ec.jeu.get(c);
       v.faisceau.visible = !p && (e.w + e.b > 0);
@@ -210,9 +274,13 @@ class EchecsControle {
       v.epee.visible = !!attaque;
       v.bouclier.visible = !!defense;
       if (attaque) { this._materiaux(v.epee, p.color === 'w' ? 'b' : 'w'); v.epee.scale.setScalar(taille(attaque)); }
-      if (defense) { this._materiaux(v.bouclier, p.color); v.bouclier.scale.setScalar(taille(defense)); }
+      // Pièce défendue mais attaquée : perd-elle quand même du matériel au terme des échanges ?
+      v.perte = attaque && defense && p.type !== 'k' ? Math.max(0, ec_echange(ec.jeu, c)) : 0;
+      if (v.perte) menaces = true;
+      else { v.menace.emissiveIntensity = 0; v.menace.color.copy(v.menace.userData.base); }
+      if (defense) { this._materiaux(v.bouclier, p.color, v.perte ? v.menace : null); v.bouclier.scale.setScalar(taille(defense)); }
     }
-    this._pulsation(energie);
+    this._pulsation(energie, menaces);
     ec.m.redessiner();
   }
 
@@ -221,17 +289,30 @@ class EchecsControle {
     for (const c in this.cases) { const a = this.cases[c].armes; if (a.visible) a.rotation.y = lacet; }
   }
 
-  // Pulsation lente de l'énergie : un comportement du moteur, actif seulement quand des faisceaux sont visibles
-  _pulsation(oui) {
-    if (oui && !this._puls) {
+  // Pulsation lente de l'énergie et lueur des boucliers menacés : un comportement du moteur, actif seulement
+  // quand il y a des faisceaux ou des menaces à animer. Lueur « luciole » : montée et descente douces, longue
+  // pause, phase propre à chaque bouclier ; la face du bouclier vire au rouge (au moins à 60 % au sommet, pleinement
+  // à partir de 5 points de matériel perdu).
+  _pulsation(energie, menaces) {
+    this._anime = { energie, menaces };
+    if ((energie || menaces) && !this._puls) {
       let t = 0;
       this._puls = this.ec.m.animations.comportement(dt => {
         t += dt;
-        const o = 0.78 + 0.22 * Math.sin(t * 2.6);
-        this.matEnergie.w.opacity = this.matEnergie.b.opacity = o;
+        if (this._anime.energie) this.matEnergie.w.opacity = this.matEnergie.b.opacity = 0.78 + 0.22 * Math.sin(t * 2.6);
+        if (this._anime.menaces) {
+          for (const c in this.cases) {
+            const v = this.cases[c];
+            if (!v.perte) continue;
+            const onde = 0.5 - 0.5 * Math.cos(t * 2.2 + v.phase);
+            const a = (0.6 + 0.4 * Math.min(1, v.perte / 5)) * onde * onde;
+            v.menace.color.copy(v.menace.userData.base).lerp(this.rouge, a);
+            v.menace.emissiveIntensity = 0.5 * a;
+          }
+        }
         return true;
       });
-    } else if (!oui && this._puls) {
+    } else if (!energie && !menaces && this._puls) {
       this._puls.arreter();
       this._puls = null;
     }

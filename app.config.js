@@ -7,7 +7,7 @@ self.APP = Object.freeze({
   name: 'PowerChess',                       // nom court (écran d'accueil, titre)
   fullName: 'PowerChess — échecs et contrôle des cases',
   tagline: 'Échecs et contrôle des cases',
-  version: 'v3',                            // ← à incrémenter à chaque publication
+  version: 'v5',                            // ← à incrémenter à chaque publication
   prefix: 'powerchess',                     // préfixe des données locales (« powerchess: ») et des caches (« powerchess-v1 »)
   startTab: 'echecs'                        // onglet ouvert au premier lancement
 });
