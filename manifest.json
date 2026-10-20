@@ -1,0 +1,20 @@
+{
+  "id": "./",
+  "name": "PowerChess — échecs et contrôle des cases",
+  "short_name": "PowerChess",
+  "description": "Partie d’échecs à deux sur la même tablette, en 3D, avec le contrôle des cases.",
+  "lang": "fr",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#2a1fd1",
+  "theme_color": "#2a1fd1",
+  "icons": [
+    { "src": "icons/icon-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/icon-1024x1024.png", "sizes": "1024x1024", "type": "image/png", "purpose": "any" }
+  ]
+}

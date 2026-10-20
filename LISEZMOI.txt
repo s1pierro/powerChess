@@ -1,0 +1,109 @@
+PowerChess — échecs et contrôle des cases
+=========================================
+Partie d'échecs à deux joueurs sur la même tablette, en 3D (three.js, rendu cel-shading), avec le contrôle des
+cases : faisceaux d'énergie sur les cases vides contrôlées, épées sur les pièces attaquées, boucliers sur les
+pièces défendues. Application extraite du projet GDA (onglet « PowerChess »), dont elle garde la coquille PWA :
+écran d'accueil avec l'état de l'application, Démarrer en plein écran ou dans le navigateur, installation,
+mise à jour, réinitialisation ; service worker versionné ; données isolées (préfixe « powerchess: »).
+
+Jouer
+-----
+  Toucher une pièce du camp au trait, puis une case marquée · Glisser : tourner · Pincer : zoom ·
+  Double appui hors du plateau : vue du joueur au trait. Boutons : Annuler, Vue (suit le trait / libre),
+  Nouvelle partie (deux appuis), Apparence (jeu de pièces, couleurs), ⚔ contrôle des cases, son.
+
+Mise en route
+-------------
+1. Déposer le dossier sur le serveur et ouvrir index.html.
+   Le service worker et l'installation exigent https:// (ou http://localhost).
+2. L'écran d'accueil s'affiche : « Démarrer en plein écran » (secours quand l'appli n'est pas installée),
+   « Démarrer dans le navigateur », « Installer l'application » quand le navigateur le propose.
+3. Une fois installée, l'appli s'ouvre directement en plein écran : l'écran d'accueil propose alors « Démarrer ».
+   Réglages › Installation et état le rouvre à tout moment.
+
+Fichiers
+--------
+  app.config.js      nom, slogan, VERSION, préfixe des données et des caches : tout part d'ici
+  index.html         coquille : sortie de secours ?reset, console ?eruda, hauteur d'écran fiable, ordre des scripts
+  manifest.json      nom d'installation, couleurs, icônes (mode plein écran)
+  service-worker.js  cache hors ligne : réseau d'abord (5 s), cache en secours ; bibliothèques CDN en cache d'abord
+  storage-ns.js      préfixe « powerchess: » automatique sur localStorage (d'autres applis peuvent partager l'adresse)
+  pwa.js             écran d'accueil / état, installation, mise à jour, plein écran, réinitialisation (window.PWA)
+  contexts.js        Context / ContextManager (un élément DOM par onglet, état mémorisé, pages superposées),
+                     en-tête à vague (mkWaveHeader), icônes (uiSvg, uiPic)
+  app.js             classe App : onglets (TABS), enregistrement des contextes, toast, stockage
+  moteur/            moteur de jeu 3D sur three.js (voir plus bas)
+  ctx-echecs.js      onglet « PowerChess » : partie à deux sur le même appareil, rendu cel-shading, contrôle des cases
+  ctx-reglages.js    plein écran, installation et état, version
+  modeles/echecs/    pièces d'echiquierJS (OBJ) et jeu « Facettes » (STL)
+  sons/echecs/       sons d'echiquierJS
+  lib/three.min.js   three.js r159, rendu WebGL (licence MIT), build classique : variable globale THREE
+  lib/chess.js       règles des échecs (chess.js, Jeff Hlywa, licence BSD)
+  css/app.css        thème : toutes les couleurs sont des variables en tête de fichier
+  css/pwa.css        écran d'accueil
+  icons/             icon.svg / icon-maskable.svg (sources), glyph.svg (pion monochrome de l'en-tête), PNG du manifeste
+
+Publier une nouvelle version
+----------------------------
+  Incrémenter `version` dans app.config.js (v1 → v2…). À l'ouverture suivante, l'écran d'accueil affiche
+  « Mise à jour · Disponible » et le bouton « Mettre à jour l'application » ; l'ancien cache est supprimé.
+  Ajouter tout nouveau fichier à la liste SHELL de service-worker.js pour qu'il fonctionne hors ligne.
+
+Ajouter un onglet
+-----------------
+  1. Créer ctx-mononglet.js :   class MonOngletContext extends Context { build(el) { … } onShow() { … } }
+  2. Le charger dans index.html (avant app.js) et l'ajouter à SHELL.
+  3. Dans app.js : this.contexts.register(new MonOngletContext(this, 'mononglet')) dans initContexts(),
+     et une entrée { id: 'mononglet', label, off, on } dans TABS (icône contour / icône pleine).
+
+Ajouter une page superposée
+---------------------------
+  this.contexts.register(new MaPage(this, 'ma-page'), { overlay: true })   puis   app.contexts.open('ma-page').
+  app.contexts.back() la ferme ; un second appui sur l'onglet actif ferme toutes les pages superposées.
+
+Changer l'identité
+------------------
+  Nom / slogan : app.config.js (+ manifest.json et <title> d'index.html).
+  Couleurs : css/app.css (--accent-color, --hot-color…) + theme_color / background_color du manifeste
+  et <meta name="theme-color"> d'index.html.
+  Icônes : remplacer icons/*.png (mêmes noms) et icons/glyph.svg (monochrome, sert de masque).
+
+Secours
+-------
+  ?reset   à la fin de l'adresse : supprime service worker et caches, puis recharge (données conservées).
+  ?eruda   à la fin de l'adresse : console de débogage sur mobile.
+
+Moteur 3D (moteur/)
+-------------------
+Rendu WebGL par three.js (lib/three.min.js, r159 : la dernière version livrée en script classique, sans
+modules ES). Le moteur garde ses propres modules pour les gestes, les événements et les animations, et
+manipule directement les objets three.js (THREE.Mesh, THREE.Group…). Modules, dans l'ordre de chargement :
+  modeles.js     Modeles : depuisOBJ / charger(url) → BufferGeometry à facettes (un groupe par « usemtl »,
+                 noms dans geo.userData.materiaux), contour(geo, épaisseur) + materiauContour(couleur)
+                 (contour « dessin animé » par coque inversée), paliers(n) (gradientMap de MeshToonMaterial),
+                 damier(n, c1, c2) (texture aux pixels nets)
+  evenements.js  Evenements : ecouter / emettre / differer, minuteurs apres / chaque en temps de jeu
+  tactile.js     Tactile : tactile:appui, double-appui, appui-long, glisser(-debut, -fin), pincer(-fin)
+  animation.js   Animations : vers(cible, props, durée, opts) → .fini (promesse), comportement(fn), Assouplir ;
+                 marche sur n'importe quel objet (mesh.position, mesh.scale, mesh.rotation…)
+  maillage.js    Maillage : lecteurs OBJ / STL / glTF, geometrie() (sert aussi à l'épée et au bouclier)
+  sons.js        Sons : charger({ nom: url }), jouer(nom, { volume, vitesse, delai })
+  moteur.js      Moteur : scene, camera, renderer, soleil (lumière qui projette les ombres), ciel (ambiance),
+                 orbiter(cible, distance, lacet, hauteur), placerSoleil([x, y, z]), objetSous(clientX, clientY)
+                 (ignore userData.selectionnable = false), couleur('--accent-color') (thème → THREE.Color),
+                 pixelise = n (gros pixels), stats, boucle de jeu (demarrer / arreter), ajouterModule ;
+                 { continu: false } : rendu à la demande (gestes, animations, moteur.redessiner())
+  Ombres : mesh.castShadow (projette) et mesh.receiveShadow (reçoit) ; zone couverte : { ombres: { taille } }.
+
+  const m = new Moteur(element, { champ: 50 });
+  const cube = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1),
+    new THREE.MeshLambertMaterial({ color: m.couleur('--accent-color'), flatShading: true }));
+  cube.position.y = 0.5;
+  cube.castShadow = true;
+  m.scene.add(cube);
+  m.orbiter({ x: 0, y: 0, z: 0 }, 6, 0.5, 0.4);
+  m.evenements.ecouter('tactile:appui', d => {
+    if (m.objetSous(d.clientX, d.clientY) === cube)
+      m.animations.vers(cube.position, { y: 2 }, 0.4, { assouplir: 'sortie', allerRetour: true });
+  });
+  m.demarrer();
