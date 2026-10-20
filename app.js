@@ -8,12 +8,12 @@ const TAB_CUT = 'var(--navbar-footer-color)';   // couleur des « découpes » d
 
 const TABS = [{
   id: 'echecs',
-  label: 'PowerChess',
+  label: 'PowerChess',            // nom propre, identique dans toutes les langues
   off: TAB_SVG(`<circle cx="12" cy="6" r="2.6"/><path d="M10 9.6h4M10.6 9.6c0 3.2-1.4 6-3.1 8.4h9c-1.7-2.4-3.1-5.2-3.1-8.4"/><path d="M6 21h12"/>`),
   on: TAB_SVG(`<circle cx="12" cy="6" r="2.6" fill="currentColor"/><path d="M10.6 9.6c0 3.2-1.4 6-3.1 8.4h9c-1.7-2.4-3.1-5.2-3.1-8.4z" fill="currentColor"/><path d="M6 21h12"/>`)
 }, {
   id: 'reglages',
-  label: 'Réglages',
+  get label() { return tr('nav.reglages'); },
   off: TAB_SVG(`<path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>`),
   on: TAB_SVG(`<path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2.6" fill="currentColor"/><circle cx="8" cy="17" r="2.6" fill="currentColor"/>`)
 }];
@@ -129,7 +129,7 @@ class App {
       if (ctx && !ctx.built) { try { ctx.el.replaceChildren(); } catch (e2) {} }
       this._markNav(before);
       this.navActive = before;
-      this.toast('Impossible d’ouvrir « ' + id + ' » : ' + (err && err.message || err), 'err');
+      this.toast(tr('app.ouvrirImpossible', { id, err: err && err.message || err }), 'err');
     }
   }
 

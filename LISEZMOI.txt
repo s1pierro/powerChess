@@ -28,13 +28,14 @@ Fichiers
   manifest.json      nom d'installation, couleurs, icônes (mode plein écran)
   service-worker.js  cache hors ligne : réseau d'abord (5 s), cache en secours ; bibliothèques CDN en cache d'abord
   storage-ns.js      préfixe « powerchess: » automatique sur localStorage (d'autres applis peuvent partager l'adresse)
+  i18n.js            langues de l'interface (fr, en, es, de, it, pt) : tr('cle'), I18N.choisir(code) ; Réglages › Langue
   pwa.js             écran d'accueil / état, installation, mise à jour, plein écran, réinitialisation (window.PWA)
   contexts.js        Context / ContextManager (un élément DOM par onglet, état mémorisé, pages superposées),
                      en-tête à vague (mkWaveHeader), icônes (uiSvg, uiPic)
   app.js             classe App : onglets (TABS), enregistrement des contextes, toast, stockage
   moteur/            moteur de jeu 3D sur three.js (voir plus bas)
   ctx-echecs.js      onglet « PowerChess » : partie à deux sur le même appareil, rendu cel-shading, contrôle des cases
-  ctx-reglages.js    plein écran, installation et état, version
+  ctx-reglages.js    plein écran, langue, installation et état, version
   modeles/echecs/    pièces d'echiquierJS (OBJ) et jeu « Facettes » (STL)
   sons/echecs/       sons d'echiquierJS
   lib/three.min.js   three.js r159, rendu WebGL (licence MIT), build classique : variable globale THREE

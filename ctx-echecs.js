@@ -5,6 +5,7 @@
 //   echecs:coup (coup joué, mv de chess.js) · echecs:pose (la pièce arrive sur sa case) · echecs:echec ·
 //   echecs:fin ({ mat, gagnant }) · echecs:annulation · echecs:nouvelle
 // Règles : chess.js (lib/chess.js, licence BSD, la bibliothèque déjà utilisée par echiquierJS).
+// Textes : tr('ec.…') (i18n.js).
 //
 // Rendu « cel-shading » avec three.js : éclairage en 4 paliers (MeshToonMaterial), contour de silhouette par
 // coque inversée (Modeles.contour), ombres portées par le soleil sur le plateau et sur les pièces voisines.
@@ -18,25 +19,26 @@
 
 const EC_FICHIERS = 'abcdefgh';
 const EC_PIECES = { p: 'pion', r: 'tour', n: 'cavalier', b: 'fou', q: 'dame', k: 'roi' };
-// Jeux de pièces : fichiers dans modeles/echecs/ (à lister aussi dans SHELL du service worker).
+// Jeux de pièces : fichiers dans modeles/echecs/ (à lister aussi dans SHELL du service worker) ;
+// noms affichés : clés « ec.jeu.<id> » d'i18n.js.
 // `echelle` : les modèles font environ 64 unités par case ; une case vaut 1 ici. Base en 0, cavalier tourné vers +z.
 const EC_JEUX = {
-  echiquierjs: { nom: 'echiquierJS', echelle: 1 / 56,
+  echiquierjs: { echelle: 1 / 56,
     fichiers: { p: 'pion.obj', r: 'tour.obj', n: 'cavalier.obj', b: 'fou.obj', q: 'dame.obj', k: 'roi.obj' } },
-  facettes: { nom: 'Facettes', echelle: 1 / 56,
+  facettes: { echelle: 1 / 56,
     fichiers: { p: 'pawn.stl', r: 'rook.stl', n: 'knight.stl', b: 'bishop.stl', q: 'queen.stl', k: 'king.stl' } }
 };
 // Thèmes : couleurs du plateau, des pièces, du dernier coup, du contour et de l'énergie des cases contrôlées par
 // les blancs et par les noirs (la sélection et les prises suivent les couleurs de l'application : --accent-color,
-// --hot-color)
+// --hot-color) ; noms affichés : clés « ec.theme.<id> » d'i18n.js
 const EC_THEMES = {
-  bois:    { nom: 'Bois',    claire: '#ecdcb9', foncee: '#a9774f', cadre: '#4d3323', blancs: '#f4f0e6', noirs: '#4b4459', dernier: '#e3c766', contour: '#16121f', energieB: '#ffd75e', energieN: '#9a6bff' },
-  tournoi: { nom: 'Tournoi', claire: '#eeeed2', foncee: '#769656', cadre: '#34452a', blancs: '#fbfaf3', noirs: '#33303a', dernier: '#f3ef6a', contour: '#141712', energieB: '#fff27a', energieN: '#ff6a4d' },
-  marbre:  { nom: 'Marbre',  claire: '#ececef', foncee: '#8e94a2', cadre: '#3a3d47', blancs: '#ffffff', noirs: '#30333c', dernier: '#a3c8e6', contour: '#121318', energieB: '#7fd3ff', energieN: '#ff7fb0' },
-  ocean:   { nom: 'Océan',   claire: '#d5e8f0', foncee: '#4c7fa6', cadre: '#1d3850', blancs: '#f6f3e9', noirs: '#e0703f', dernier: '#f2c66d', contour: '#0d1a26', energieB: '#ffe28a', energieN: '#ff7a3d' },
-  corail:  { nom: 'Corail',  claire: '#fbe4d3', foncee: '#e0896c', cadre: '#7a3a2f', blancs: '#fff9ef', noirs: '#4a2f47', dernier: '#ffd36b', contour: '#1f1218', energieB: '#ffe066', energieN: '#a05cff' },
-  nuit:    { nom: 'Nuit',    claire: '#5c5a7c', foncee: '#2b2940', cadre: '#13121c', blancs: '#e9e5ff', noirs: '#e0527a', dernier: '#7c6cf0', contour: '#07060c', energieB: '#bfe7ff', energieN: '#ff4f8b' },
-  retro:   { nom: 'Rétro',   claire: '#9bbc0f', foncee: '#5a8a1c', cadre: '#0f380f', blancs: '#e0f8d0', noirs: '#1e4d1e', dernier: '#c8d870', contour: '#0f380f', energieB: '#e0f8d0', energieN: '#0f380f' }
+  bois:    { claire: '#ecdcb9', foncee: '#a9774f', cadre: '#4d3323', blancs: '#f4f0e6', noirs: '#4b4459', dernier: '#e3c766', contour: '#16121f', energieB: '#ffd75e', energieN: '#9a6bff' },
+  tournoi: { claire: '#eeeed2', foncee: '#769656', cadre: '#34452a', blancs: '#fbfaf3', noirs: '#33303a', dernier: '#f3ef6a', contour: '#141712', energieB: '#fff27a', energieN: '#ff6a4d' },
+  marbre:  { claire: '#ececef', foncee: '#8e94a2', cadre: '#3a3d47', blancs: '#ffffff', noirs: '#30333c', dernier: '#a3c8e6', contour: '#121318', energieB: '#7fd3ff', energieN: '#ff7fb0' },
+  ocean:   { claire: '#d5e8f0', foncee: '#4c7fa6', cadre: '#1d3850', blancs: '#f6f3e9', noirs: '#e0703f', dernier: '#f2c66d', contour: '#0d1a26', energieB: '#ffe28a', energieN: '#ff7a3d' },
+  corail:  { claire: '#fbe4d3', foncee: '#e0896c', cadre: '#7a3a2f', blancs: '#fff9ef', noirs: '#4a2f47', dernier: '#ffd36b', contour: '#1f1218', energieB: '#ffe066', energieN: '#a05cff' },
+  nuit:    { claire: '#5c5a7c', foncee: '#2b2940', cadre: '#13121c', blancs: '#e9e5ff', noirs: '#e0527a', dernier: '#7c6cf0', contour: '#07060c', energieB: '#bfe7ff', energieN: '#ff4f8b' },
+  retro:   { claire: '#9bbc0f', foncee: '#5a8a1c', cadre: '#0f380f', blancs: '#e0f8d0', noirs: '#1e4d1e', dernier: '#c8d870', contour: '#0f380f', energieB: '#e0f8d0', energieN: '#0f380f' }
 };
 const EC_CONTOUR = 1.4;             // épaisseur du contour, en unités des modèles (≈ 0,025 case)
 const ec_borner = (v, min, max) => v < min ? min : v > max ? max : v;
@@ -258,7 +260,7 @@ class EchecsContext extends Context {
     try {
       m = this.m = new Moteur(this.vue, { continu: false, champ: 45, ombres: { taille: 6.5 } });
     } catch (e) {
-      this._statut(e.message, true);
+      this._statut(tr('ec.webgl'), true);
       return;
     }
     m.placerSoleil([-0.5, 1, 0.7]);
@@ -272,7 +274,7 @@ class EchecsContext extends Context {
     this._sons(m);
     m.evenements.ecouter('echecs:coup', mv => { this.dernierCoup = mv.san; });
 
-    this._statut('Chargement des pièces…');
+    this._statut(tr('ec.chargement'));
     this._charger(this.state.jeu).then(md => {
       this.modeles = md;
       this.echelle = EC_JEUX[this.state.jeu].echelle;
@@ -280,7 +282,7 @@ class EchecsContext extends Context {
       this.occupe = false;
       this._marquer();
       this._statut();
-    }).catch(err => this._statut('Pièces introuvables : ' + (err && err.message || err), true));
+    }).catch(err => this._statut(tr('ec.introuvables', { err: err && err.message || err }), true));
   }
 
   onShow() {
@@ -315,22 +317,22 @@ class EchecsContext extends Context {
       barre.appendChild(b);
       return b;
     };
-    bouton('↶ Annuler', () => this._annuler());
+    bouton(tr('ec.annuler'), () => this._annuler());
     this.btnSuivre = bouton('', () => {
       this.state.suivre = !this.state.suivre;
       this.save();
       this._afficherSuivre();
       if (this.state.suivre) this._orienter();
     });
-    this.btnNouvelle = bouton('Nouvelle partie', () => this._nouvellePartie());
-    bouton('🎨 Apparence', () => this._ouvrirApparence());
+    this.btnNouvelle = bouton(tr('ec.nouvelle'), () => this._nouvellePartie());
+    bouton(tr('ec.apparence'), () => this._ouvrirApparence());
     this.btnControle = bouton('⚔', () => {
       this.state.controle = !this.state.controle;
       this.save();
       this._afficherControle();
       if (this.controle) this.controle.mettreAJour();
     });
-    this.btnControle.setAttribute('aria-label', 'Contrôle des cases');
+    this.btnControle.setAttribute('aria-label', tr('ec.controle'));
     this.btnSon = bouton('', () => {
       this.state.son = !this.state.son;
       this.save();
@@ -340,7 +342,7 @@ class EchecsContext extends Context {
         this.m.sons.jouer('coup');
       }
     });
-    this.btnSon.setAttribute('aria-label', 'Sons');
+    this.btnSon.setAttribute('aria-label', tr('ec.sons'));
     this._afficherSuivre();
     this._afficherSon();
     this._afficherControle();
@@ -352,20 +354,21 @@ class EchecsContext extends Context {
     const carte = document.createElement('div');
     carte.className = 'ec-carte';
     const q = document.createElement('b');
-    q.textContent = 'Promotion du pion';
+    q.textContent = tr('ec.promotion');
     const choix = document.createElement('div');
     choix.className = 'ec-choix';
-    for (const [code, nom, glyphe] of [['q', 'Dame', '♛'], ['r', 'Tour', '♜'], ['b', 'Fou', '♝'], ['n', 'Cavalier', '♞']]) {
+    for (const [code, glyphe] of [['q', '♛'], ['r', '♜'], ['b', '♝'], ['n', '♞']]) {
       const b = document.createElement('button');
       b.type = 'button';
-      b.innerHTML = `<span>${glyphe}</span>${nom}`;
+      b.innerHTML = `<span>${glyphe}</span>`;
+      b.append(tr('ec.' + code));
       b.addEventListener('click', () => this._promouvoir(code));
       choix.appendChild(b);
     }
     const non = document.createElement('button');
     non.type = 'button';
     non.className = 'ec-non';
-    non.textContent = 'Annuler';
+    non.textContent = tr('ec.annulerPromo');
     non.addEventListener('click', () => { this.promo.hidden = true; this._promotion = null; });
     carte.append(q, choix, non);
     this.promo.appendChild(carte);
@@ -389,7 +392,7 @@ class EchecsContext extends Context {
     for (const id in EC_JEUX) {
       const b = document.createElement('button');
       b.type = 'button';
-      b.textContent = EC_JEUX[id].nom;
+      b.textContent = tr('ec.jeu.' + id);
       b.addEventListener('click', () => this._changerJeu(id));
       jeux.appendChild(b);
       this.btnJeux[id] = b;
@@ -403,7 +406,8 @@ class EchecsContext extends Context {
       b.type = 'button';
       // Aperçu : quatre cases du plateau et une pièce de chaque camp
       b.innerHTML = `<i style="--c1:${t.claire};--c2:${t.foncee};--bord:${t.cadre}">`
-        + `<em style="background:${t.blancs}"></em><em style="background:${t.noirs}"></em></i>${t.nom}`;
+        + `<em style="background:${t.blancs}"></em><em style="background:${t.noirs}"></em></i>`;
+      b.append(tr('ec.theme.' + id));
       b.addEventListener('click', () => this._changerTheme(id));
       themes.appendChild(b);
       this.btnThemes[id] = b;
@@ -412,9 +416,9 @@ class EchecsContext extends Context {
     const fermer = document.createElement('button');
     fermer.type = 'button';
     fermer.className = 'ec-non';
-    fermer.textContent = 'Fermer';
+    fermer.textContent = tr('ec.fermer');
     fermer.addEventListener('click', () => { fond.hidden = true; });
-    carte.append(titre('Jeu de pièces'), jeux, titre('Couleurs'), themes, fermer);
+    carte.append(titre(tr('ec.jeuPieces')), jeux, titre(tr('ec.couleurs')), themes, fermer);
     fond.appendChild(carte);
     this._afficherApparence();
     return fond;
@@ -454,7 +458,7 @@ class EchecsContext extends Context {
         o.scale.setScalar(this.echelle);
       }
       this.m.redessiner();
-    }).catch(err => this._statut('Pièces introuvables : ' + (err && err.message || err), true));
+    }).catch(err => this._statut(tr('ec.introuvables', { err: err && err.message || err }), true));
   }
 
   _afficherControle() {
@@ -484,22 +488,22 @@ class EchecsContext extends Context {
   }
 
   _afficherSuivre() {
-    this.btnSuivre.textContent = this.state.suivre ? '⟲ Vue : suit le trait' : '⟲ Vue : libre';
+    this.btnSuivre.textContent = tr(this.state.suivre ? 'ec.vueTrait' : 'ec.vueLibre');
     this.btnSuivre.classList.toggle('on', this.state.suivre);
   }
 
   _statut(texte, alerte) {
     const j = this.jeu;
     if (!texte) {
-      const camp = j.turn() === 'w' ? 'blancs' : 'noirs', autre = j.turn() === 'w' ? 'noirs' : 'blancs';
+      const camp = j.turn(), autre = camp === 'w' ? 'b' : 'w';
       const n = Math.floor(j.history().length / 2) + 1;
       alerte = j.in_check();
-      if (j.in_checkmate()) texte = `Échec et mat : les ${autre} gagnent`;
-      else if (j.in_stalemate()) texte = 'Pat : partie nulle';
-      else if (j.in_threefold_repetition()) texte = 'Partie nulle par répétition';
-      else if (j.insufficient_material()) texte = 'Partie nulle : matériel insuffisant';
-      else if (j.in_draw()) texte = 'Partie nulle (règle des 50 coups)';
-      else texte = `Coup ${n} · aux ${camp}` + (alerte ? ' : échec !' : '');
+      if (j.in_checkmate()) texte = tr('ec.mat.' + autre);
+      else if (j.in_stalemate()) texte = tr('ec.pat');
+      else if (j.in_threefold_repetition()) texte = tr('ec.repetition');
+      else if (j.insufficient_material()) texte = tr('ec.materiel');
+      else if (j.in_draw()) texte = tr('ec.cinquante');
+      else texte = tr((alerte ? 'ec.traitEchec.' : 'ec.trait.') + camp, { n });
     }
     this.etat.textContent = texte;
     this.etat.classList.toggle('alerte', !!alerte);
@@ -780,7 +784,7 @@ class EchecsContext extends Context {
     if (this.occupe) return;
     if (!this._confirmer) {
       this._confirmer = true;
-      this.btnNouvelle.textContent = 'Confirmer ?';
+      this.btnNouvelle.textContent = tr('ec.confirmer');
       this.btnNouvelle.classList.add('alerte');
       clearTimeout(this._tConfirmer);
       this._tConfirmer = setTimeout(() => this._finConfirmer(), 3000);
@@ -801,7 +805,7 @@ class EchecsContext extends Context {
   _finConfirmer() {
     this._confirmer = false;
     clearTimeout(this._tConfirmer);
-    this.btnNouvelle.textContent = 'Nouvelle partie';
+    this.btnNouvelle.textContent = tr('ec.nouvelle');
     this.btnNouvelle.classList.remove('alerte');
   }
 

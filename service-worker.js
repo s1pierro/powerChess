@@ -8,7 +8,7 @@ const LIBS = APP.prefix + '-libs';                  // bibliothèques externes (
 const SHELL = [
   './', './index.html', './manifest.json', './app.config.js',
   './css/app.css', './css/pwa.css',
-  './storage-ns.js', './pwa.js', './contexts.js',
+  './storage-ns.js', './i18n.js', './pwa.js', './contexts.js',
   './lib/three.min.js', './moteur/modeles.js', './moteur/maillage.js',
   './moteur/evenements.js', './moteur/tactile.js', './moteur/animation.js', './moteur/sons.js', './moteur/moteur.js',
   './lib/chess.js', './modeles/echecs/pion.obj', './modeles/echecs/tour.obj', './modeles/echecs/cavalier.obj',

@@ -1,4 +1,5 @@
 // pwa.js — installation PWA, service worker, état de l'application, réinitialisation, plein écran.
+// Textes traduits par tr() (i18n.js, chargé avant).
 // Expose window.PWA et remplit l'écran d'accueil (#overlay) : état de l'application, puis
 //   « Démarrer en plein écran » / « Démarrer dans le navigateur » (ou « Démarrer » une fois installée),
 //   « Mettre à jour l'application » quand une nouvelle version attend, « Installer l'application » si proposé,
@@ -40,13 +41,13 @@
     isFullscreen() { return !!document.fullscreenElement; },
 
     swState() {
-      if (!('serviceWorker' in navigator)) return { t: window.isSecureContext ? 'Non pris en charge' : 'HTTPS requis', s: KO };
-      if (this.swError) return { t: 'Erreur', s: KO };
-      if (!this.reg) return { t: 'Enregistrement…', s: WARN };
+      if (!('serviceWorker' in navigator)) return { t: tr(window.isSecureContext ? 'pwa.sw.nonPris' : 'pwa.sw.https'), s: KO };
+      if (this.swError) return { t: tr('pwa.sw.erreur'), s: KO };
+      if (!this.reg) return { t: tr('pwa.sw.enregistrement'), s: WARN };
       const w = this.reg.active || this.reg.waiting || this.reg.installing;
-      if (!w) return { t: 'Inactif', s: WARN };
-      if (this.reg.installing && !this.reg.active) return { t: 'Installation…', s: WARN };
-      if (w.state === 'activated') return navigator.serviceWorker.controller ? { t: 'Actif', s: OK } : { t: 'Actif (au prochain démarrage)', s: WARN };
+      if (!w) return { t: tr('pwa.sw.inactif'), s: WARN };
+      if (this.reg.installing && !this.reg.active) return { t: tr('pwa.sw.installation'), s: WARN };
+      if (w.state === 'activated') return navigator.serviceWorker.controller ? { t: tr('pwa.sw.actif'), s: OK } : { t: tr('pwa.sw.actifProchain'), s: WARN };
       return { t: w.state, s: WARN };
     },
 
@@ -79,10 +80,10 @@
     },
 
     fmt(b) {
-      if (b < 1024) return b + ' o';
-      if (b < 1048576) return (b / 1024).toFixed(1).replace('.', ',') + ' Ko';
-      if (b < 1073741824) return (b / 1048576).toFixed(1).replace('.', ',') + ' Mo';
-      return (b / 1073741824).toFixed(1).replace('.', ',') + ' Go';
+      if (b < 1024) return I18N.nombre(b) + ' ' + tr('unite.o');
+      if (b < 1048576) return I18N.nombre(b / 1024, 1) + ' ' + tr('unite.ko');
+      if (b < 1073741824) return I18N.nombre(b / 1048576, 1) + ' ' + tr('unite.mo');
+      return I18N.nombre(b / 1073741824, 1) + ' ' + tr('unite.go');
     },
 
     // ---- Actions ------------------------------------------------------
@@ -188,8 +189,8 @@
       logo.src = 'icons/icon-256x256.png';
       logo.alt = '';
       panel.append(logo, this._el('h1', 'pw-title', APP.name));
-      if (APP.tagline) panel.appendChild(this._el('p', 'pw-tag', APP.tagline));
-      panel.appendChild(this._el('p', 'pw-ver', info.name ? 'version ' + info.name.slice(APP.prefix.length + 1) : 'version ' + (APP.version || '—')));
+      panel.appendChild(this._el('p', 'pw-tag', tr('app.slogan')));
+      panel.appendChild(this._el('p', 'pw-ver', tr('pwa.version', { v: info.name ? info.name.slice(APP.prefix.length + 1) : (APP.version || '—') })));
 
       const card = this._el('div', 'pw-card');
       const row = (k, v, s) => {
@@ -197,23 +198,22 @@
         r.append(this._el('span', 'pw-dot' + (s ? ' ' + s : '')), this._el('span', 'pw-k', k), this._el('span', 'pw-v', v));
         card.appendChild(r);
       };
-      const modeTxt = { fullscreen: 'Installée · plein écran', standalone: 'Installée · autonome', 'minimal-ui': 'Installée · minimale', browser: 'Dans le navigateur' }[mode];
-      row('Application', modeTxt, mode === 'browser' ? (this.canInstall() ? WARN : null) : OK);
-      row('Service worker', sw.t, sw.s);
-      row('Hors ligne', info.n ? 'Prêt · ' + info.n + ' fichiers' : 'Non disponible', info.n ? OK : WARN);
-      row('Connexion', navigator.onLine ? 'En ligne' : 'Hors ligne', navigator.onLine ? OK : WARN);
-      row('Données locales', this.fmt(this.localSize()));
-      if (stor && stor.quota) row('Stockage navigateur', this.fmt(stor.usage) + ' / ' + this.fmt(stor.quota));
-      if (this.fullscreenSupported()) row('Plein écran', this.isFullscreen() ? 'Actif' : 'Inactif', this.isFullscreen() ? OK : null);
+      const modeTxt = tr('pwa.mode.' + mode);
+      row(tr('pwa.k.application'), modeTxt, mode === 'browser' ? (this.canInstall() ? WARN : null) : OK);
+      row(tr('pwa.k.sw'), sw.t, sw.s);
+      row(tr('pwa.k.horsLigne'), info.n ? tr('pwa.pret', { n: info.n }) : tr('pwa.indisponible'), info.n ? OK : WARN);
+      row(tr('pwa.k.connexion'), tr(navigator.onLine ? 'pwa.enLigne' : 'pwa.horsLigne'), navigator.onLine ? OK : WARN);
+      row(tr('pwa.k.donnees'), this.fmt(this.localSize()));
+      if (stor && stor.quota) row(tr('pwa.k.stockage'), this.fmt(stor.usage) + ' / ' + this.fmt(stor.quota));
+      if (this.fullscreenSupported()) row(tr('pwa.k.pleinEcran'), tr(this.isFullscreen() ? 'pwa.actif' : 'pwa.inactif'), this.isFullscreen() ? OK : null);
       for (const fn of this.rows) { try { const r = await fn(); if (r) row(r.k, r.v, r.s); } catch (e) {} }
-      if (this.updateReady()) row('Mise à jour', 'Disponible', WARN);
+      if (this.updateReady()) row(tr('pwa.k.maj'), tr('pwa.disponible'), WARN);
       panel.appendChild(card);
 
       if (!this.isInstalled() && !this.canInstall()) {
         const hint = this.isIOS()
-          ? 'Pour installer : Safari › Partager › « Sur l’écran d’accueil ».'
-          : (window.isSecureContext ? 'L’installation est proposée par le menu du navigateur (« Installer l’application »).'
-                                    : 'L’installation nécessite une connexion sécurisée (HTTPS).');
+          ? tr('pwa.aide.ios')
+          : tr(window.isSecureContext ? 'pwa.aide.menu' : 'pwa.aide.https');
         panel.appendChild(this._el('p', 'pw-hint', hint));
       }
 
@@ -226,21 +226,21 @@
       };
       // Lancement : installée → « Démarrer » ; dans le navigateur → plein écran en secours, ou navigateur seul
       const fsFallback = mode === 'browser' && this.fullscreenSupported() && !this.isFullscreen();
-      if (this._started) btn('Fermer', '', () => this.start(false));
+      if (this._started) btn(tr('pwa.fermer'), '', () => this.start(false));
       else if (fsFallback) {
-        btn('Démarrer en plein écran', '', () => this.start(true));
-        btn('Démarrer dans le navigateur', 'sec', () => this.start(false));
-      } else btn('Démarrer', '', () => this.start(false));
-      if (this.updateReady()) btn('Mettre à jour l’application', 'hot', () => this.applyUpdate());
-      if (this.canInstall()) btn('Installer l’application', 'sec', () => this.install());
+        btn(tr('pwa.demarrerPE'), '', () => this.start(true));
+        btn(tr('pwa.demarrerNav'), 'sec', () => this.start(false));
+      } else btn(tr('pwa.demarrer'), '', () => this.start(false));
+      if (this.updateReady()) btn(tr('pwa.maj'), 'hot', () => this.applyUpdate());
+      if (this.canInstall()) btn(tr('pwa.installer'), 'sec', () => this.install());
       if (this._started && mode === 'browser' && this.fullscreenSupported()) {
-        btn(this.isFullscreen() ? 'Quitter le plein écran' : 'Passer en plein écran', 'sec', () => this.toggleFullscreen());
+        btn(tr(this.isFullscreen() ? 'pwa.quitterPE' : 'pwa.passerPE'), 'sec', () => this.toggleFullscreen());
       }
 
-      panel.appendChild(this._el('div', 'pw-sep', 'Réinitialisation'));
-      this._armBtn(btn('Réinitialiser l’application', 'sec', () => {}), 'Réinitialiser l’application', 'Confirmer ? (cache et mises à jour)', () => this.reset(false));
-      this._armBtn(btn('Tout effacer, données comprises', 'danger', () => {}), 'Tout effacer, données comprises', 'Confirmer ? (données locales perdues)', () => this.reset(true));
-      panel.appendChild(this._el('p', 'pw-hint', 'La réinitialisation supprime le cache hors ligne et recharge l’application ; vos données sont conservées, sauf avec « Tout effacer ».'));
+      panel.appendChild(this._el('div', 'pw-sep', tr('pwa.reinit')));
+      this._armBtn(btn(tr('pwa.reinitApp'), 'sec', () => {}), tr('pwa.reinitApp'), tr('pwa.reinitConf'), () => this.reset(false));
+      this._armBtn(btn(tr('pwa.effacer'), 'danger', () => {}), tr('pwa.effacer'), tr('pwa.effacerConf'), () => this.reset(true));
+      panel.appendChild(this._el('p', 'pw-hint', tr('pwa.reinitAide')));
 
       ov.replaceChildren(panel);
     },

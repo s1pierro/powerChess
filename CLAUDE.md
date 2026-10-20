@@ -40,7 +40,8 @@ Règles : chess.js. Jeux de pièces `EC_JEUX`, thèmes `EC_THEMES` (bouton Appar
 - Le développeur travaille sur tablette Android de 13 pouces (Termux), sans clavier de bureau : ne pas proposer de
   raccourcis clavier ni d'outils qui supposent un ordinateur. Préférer des solutions testables dans le navigateur
   de la tablette. L'application vise ce grand écran tactile, en paysage surtout, en gardant des cibles au doigt.
-- Interface, textes et commentaires **en français** (typographie française : espaces avant « : ; ? ! », guillemets « »).
+- Code et commentaires **en français** (typographie française : espaces avant « : ; ? ! », guillemets « »).
+  Le français est aussi la langue de référence de l'interface, traduite par `i18n.js`.
 
 ## Règles du projet
 - **Aucune étape de build** : pas de bundler, pas de npm, pas de framework, pas de modules ES. Des scripts classiques
@@ -48,6 +49,11 @@ Règles : chess.js. Jeux de pièces `EC_JEUX`, thèmes `EC_THEMES` (bouton Appar
 - **Publier une version** : incrémenter `version` dans `app.config.js` (lu par la page ET par le service worker).
   À faire à chaque livraison, sinon les appareils gardent l'ancien cache.
 - **Nouveau fichier** : l'ajouter à `index.html` (avant `app.js`) **et** à la liste `SHELL` de `service-worker.js`.
+- **Régionalisation** (`i18n.js`, chargé juste après `storage-ns.js`) : aucun texte affiché écrit en dur ; passer par
+  `tr('cle', { param })` (`{param}` remplacé). Toute nouvelle clé s'ajoute au dictionnaire `fr` (référence et repli)
+  **et** à chaque autre langue de `LANGUES` (aujourd'hui fr, en, es, de, it, pt), chacune avec sa propre typographie.
+  Nombres : `I18N.nombre(v, décimales)`. Langue : choix enregistré (clé `langue`), sinon celle de l'appareil, sinon
+  l'anglais ; `I18N.choisir(code | null)` enregistre et recharge (Réglages › Langue). Le manifeste reste en français.
 - **Stockage** : passer par `app.saveToLocal(clé, valeur)` / `app.loadFromLocal(clé)` ou `localStorage` ;
   le préfixe `powerchess:` est ajouté automatiquement par `storage-ns.js` (ne jamais l'écrire à la main).
 - **Écrans** : un onglet ou une page = une classe qui étend `Context` (voir `contexts.js`) :
@@ -77,8 +83,8 @@ Règles : chess.js. Jeux de pièces `EC_JEUX`, thèmes `EC_THEMES` (bouton Appar
 
 ## Fichiers
 `app.config.js` identité/version · `index.html` coquille · `manifest.json` · `service-worker.js` cache hors ligne ·
-`storage-ns.js` préfixe des données · `pwa.js` écran d'accueil · `contexts.js` contextes, en-tête à vague, `uiSvg` ·
-`app.js` menu de navigation et stockage · `ctx-echecs.js` PowerChess · `ctx-reglages.js` plein écran, installation,
-version · `moteur/` moteur 3D · `lib/` bibliothèques copiées · `modeles/echecs/` · `sons/echecs/` · `css/` thème ·
+`storage-ns.js` préfixe des données · `i18n.js` langues et traductions (`tr`, `I18N`) · `pwa.js` écran d'accueil · `contexts.js` contextes, en-tête à vague, `uiSvg` ·
+`app.js` menu de navigation et stockage · `ctx-echecs.js` PowerChess · `ctx-reglages.js` plein écran, langue,
+installation, version · `moteur/` moteur 3D · `lib/` bibliothèques copiées · `modeles/echecs/` · `sons/echecs/` · `css/` thème ·
 `icons/` icônes (`icon.svg` et `icon-maskable.svg` sources des PNG du manifeste, `glyph.svg` pion monochrome pour
 l'en-tête ; PNG régénérés avec `inkscape icon.svg -w 512 -h 512 -o icon-512x512.png`). Voir aussi `LISEZMOI.txt`.
